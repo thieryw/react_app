@@ -1,107 +1,136 @@
 import React, { useLayoutEffect } from "react";
 import { stringify } from "querystring";
 
-class TodoElements{
-    readonly elements: string[] = [];
 
-    public addElement(str: string){
-        this.elements.push(str);
+type Store = {
+    readonly tasks: readonly string[];
+    addTask(task: string): void;
+    removeTask(index: number): void;
+    removeAllTasks(): void;
+};
+
+namespace Store {
+
+    export async function fetch(): Promise<Store>{
+
+        await new Promise(resolve=> setTimeout(resolve,1000));
+
+        const tasks: string[] = [];
+
+        const store: Store = {
+            tasks,
+            "addTask": element=> {
+                tasks.push(element);
+            },
+            "removeTask": index => {
+                tasks.splice(index, 1);
+            },
+            "removeAllTasks": ()=> {
+                tasks.splice(0, store.tasks.length);
+            }
+        };
+
+        return store;
+
     }
-
-    public removeElement(index: number){
-        this.elements.splice(index, 1);
-    }
-
-    public removeAllElements(){
-        while(this.elements.length > 0){
-            this.elements.pop();
-        }
-
-    }
-
-    
-
 
 }
 
-const todoElements: TodoElements = new TodoElements;
+(async ()=>{
 
-type Props = {
-    submit: Function;
+    const store = await Store.fetch();
+
+
+})();
+
+
+
+
+
+namespace TodoListInput {
+
+    export type Props = {
+        addTask: Store["addTask"];
+    };
+
+    export type State = {
+        text: string;
+    };
+
 }
 
-class TodoListInput extends React.Component<Props, {text: string}>{
 
-    constructor(props: Props){
+class TodoListInput extends React.Component<TodoListInput.Props, TodoListInput.State>{
+
+    constructor(props: TodoListInput.Props) {
         super(props);
-        this.state = {
-            text: ""
-        }
+        this.state = { "text": "" };
     }
 
+    private handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        this.setState({ "text": e.target.value })
+    };
 
-    private handleChange = (e: React.ChangeEvent<HTMLInputElement>)=>{
-        this.setState({
-            text: e.target.value
-        })
-    }
-
-    private handleSubmit = (e: React.FormEvent<HTMLFormElement>)=>{
-
-        this.props.submit(this.state.text);
-        this.setState({
-            text: ""
-        })
+    private handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
-    }
+        this.props.addTask(this.state.text);
+        this.setState({ "text": "" })
+    };
 
-    render(){
-        return(
-            <form onSubmit={this.handleSubmit}>
-                <legend>add to list</legend>
-                <input value={this.state.text} type="text" onChange={this.handleChange}/>
-                <input type="submit" value="submit"/>
-            </form>
-        )
-    }
+    render = () => (
+        <form onSubmit={this.handleSubmit}>
+            <legend>add to list</legend>
+            <input
+                value={this.state.text}
+                type="text"
+                onChange={this.handleChange}
+            />
+            <input type="submit" value="submit" />
+        </form>
+    );
+
 }
 
 
 
 
+namespace Element {
 
+    export type Props = {
+        task: string;
+        removeTask: ()=> void;
+        renameTask: (renamedTask: string)=> void;
+    };
 
-type ElemProps = {
-    elem: string;
-    delete: Function;
-    newSubmission: Function;
-    index: number;
+    export type State = {
+        className: string;
+        isElemSelected: boolean;
+        currentText: string;
+    };
+
 }
 
-type ElemState = {
-    className: string;
-    isElemSelected: boolean;
-    currentText: string;
-}
 
 
-class Element extends React.Component<ElemProps, ElemState>{
-    constructor(props: {elem: string; delete: Function; newSubmission: Function; index: number}){
+
+class Element extends React.Component<Element.Props, Element.State>{
+    constructor(props: Element.Props) {
         super(props);
+
         this.state = {
             "className": "el",
             "isElemSelected": false,
-            "currentText": this.props.elem
-        }
-
+            "currentText": this.props.task
+        };
 
     }
 
-    private handleClick = ()=>{
-        if(this.state.className === "el"){
+    private handleCheckboxClick = () => {
+
+        if (this.state.className === "el") {
             this.setState({
-                className: "lineThrough"
+                "className": "lineThrough"
             })
 
             return;
@@ -113,8 +142,8 @@ class Element extends React.Component<ElemProps, ElemState>{
 
     }
 
-    private handleElemSelected = ()=>{
-        if(!this.state.isElemSelected){
+    private handleElemSelected = () => {
+        if (!this.state.isElemSelected) {
             this.setState({
                 isElemSelected: true
 
@@ -123,7 +152,7 @@ class Element extends React.Component<ElemProps, ElemState>{
 
     }
 
-    private handleNewSubmission = (e: React.FormEvent<HTMLFormElement>)=>{
+    private handleNewSubmission = (e: React.FormEvent<HTMLFormElement>) => {
 
         this.props.newSubmission(this.props.index, this.state.currentText);
 
@@ -137,53 +166,41 @@ class Element extends React.Component<ElemProps, ElemState>{
 
     }
 
-    private handleChange = (e: React.ChangeEvent<HTMLInputElement>)=>{
+    private handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         this.setState({
             currentText: e.target.value
         })
 
     }
 
+    render = () => (
+        <li className={this.state.className}>
+            <input onClick={this.handleCheckboxClick} className="checkBox" type="checkbox" />
+            <p onClick={this.handleElemSelected}>
+                {
+                    this.state.isElemSelected ?
+                        (
+                            <form onSubmit={this.handleNewSubmission} >
+                                <input type="text" onChange={this.handleChange} />
+                            </form>
+                        ) : (
+                            this.props.task
+                        )
 
+                }
+            </p>
+            <p className="delete" onClick={this.props.removeTask}>X</p>
+        </li>
+    );
 
-
-    private delete(e: number){
-
-        this.props.delete(e);
-    }
-
-    render(){
-        return(
-            <li className={this.state.className}>
-                <input onClick={this.handleClick} className="checkBox" type="checkbox"/>
-                <p onClick={this.handleElemSelected}>
-                    {
-                        (()=>{
-                            if(this.state.isElemSelected){
-                                return (
-                                    <form onSubmit={this.handleNewSubmission} >
-                                        <input type="text" onChange={this.handleChange}/>
-                                    </form>
-                                )
-                            }
-
-                            return this.props.elem;
-                        })()
-                    }
-                </p>
-                <p className="delete" onClick={() => this.delete(this.props.index)}>X</p>
-            </li>
-
-        )
-    }
 
 }
 
 
 
-export class TodoList extends React.Component<{}, {elements: TodoElements}>{
+export class TodoList extends React.Component<{ store: Store; }, { elements: TodoElements }>{
 
-    constructor(props: {}){
+    constructor(props: {}) {
         super(props);
         this.state = {
             "elements": todoElements
@@ -192,9 +209,9 @@ export class TodoList extends React.Component<{}, {elements: TodoElements}>{
 
     private index = 0;
 
-    private onSubmit = (el: string)=>{
+    private onSubmit = (el: string) => {
 
-        if(el.length === 0){
+        if (el.length === 0) {
             return;
         }
 
@@ -209,7 +226,7 @@ export class TodoList extends React.Component<{}, {elements: TodoElements}>{
 
     }
 
-    private delete = (index: number)=>{
+    private delete = (index: number) => {
 
 
         todoElements.removeElement(index);
@@ -223,17 +240,17 @@ export class TodoList extends React.Component<{}, {elements: TodoElements}>{
 
     }
 
-    private newSubmission = (index: number, newText: string)=>{
+    private newSubmission = (index: number, newText: string) => {
         todoElements.elements[index] = newText;
 
         this.setState({
             elements: todoElements
         })
 
-        this.index=0;
+        this.index = 0;
     }
 
-    private deleteAll = ()=>{
+    private deleteAll = () => {
         todoElements.removeAllElements();
         this.setState({
             elements: todoElements
@@ -242,31 +259,31 @@ export class TodoList extends React.Component<{}, {elements: TodoElements}>{
     }
 
 
-    render(){
+    render() {
         return (
             <div className="todoList">
                 <h1>Todo List</h1>
-                <TodoListInput submit={this.onSubmit}/>
+                <TodoListInput submit={this.onSubmit} />
 
                 <ul>
                     {
                         this.state.elements.elements.map(
-                            cur => <Element 
-                            elem={cur} delete={this.delete} 
-                            newSubmission={this.newSubmission}
-                            index={this.index++}/>
+                            cur => <Element
+                                elem={cur} delete={this.delete}
+                                newSubmission={this.newSubmission}
+                                index={this.index++} />
                         )
                     }
                 </ul>
 
                 {
-                    (()=>{
-                        if(this.state.elements.elements.length < 2){
+                    (() => {
+                        if (this.state.elements.elements.length < 2) {
                             return;
                         }
 
                         return (
-                            <input type="submit" value="Delete All" onClick={this.deleteAll}/>
+                            <input type="submit" value="Delete All" onClick={this.deleteAll} />
                         )
 
 
@@ -274,7 +291,7 @@ export class TodoList extends React.Component<{}, {elements: TodoElements}>{
                 }
 
 
-                
+
             </div>
         )
     }

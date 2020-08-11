@@ -10,7 +10,7 @@ import {Calculator} from "./components/Temperature";
 
 import {Money} from "./components/Money";
 
-import * as todo from "./components/TodoList";
+import { TodoList } from "./components/TodoList";
 
 import * as hooks from "./components/Hooks";
 
@@ -18,7 +18,7 @@ export const App: React.FunctionComponent = () =>{
   return(
       <div className="App">
 
-        <todo.TodoList/>
+        <TodoList/>
     
        
       </div>
